@@ -5,7 +5,16 @@ import { AuthComponent } from './auth.component';
 import { Amplify } from 'aws-amplify';
 import outputs from '../../amplify_outputs.json';
 
-Amplify.configure(outputs);
+const amplifyConfig = {
+  ...outputs,
+  aws_cognito_identity_pool_id: 'us-east-2:99d5561c-c371-4c61-a06a-1d46ea5c7557',
+  PubSub: {
+    region: outputs.aws_project_region,
+    endpoint: outputs.aws_iot_endpoint
+  }
+};
+
+Amplify.configure(amplifyConfig);
 
 @Component({
   selector: 'app-root',
