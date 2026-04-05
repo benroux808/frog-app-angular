@@ -9,8 +9,8 @@ const amplifyConfig = {
   ...outputs,
   aws_cognito_identity_pool_id: 'us-east-2:99d5561c-c371-4c61-a06a-1d46ea5c7557',
   PubSub: {
-    region: outputs.auth.aws_region,      // ✅ instead of outputs.aws_project_region
-    endpoint: 'https://a2zbsrscctgbvw-ats.iot.us-east-2.amazonaws.com'    // ✅ hardcode or add to environment
+    region: outputs.aws_pubsub_region,   // ✅ already in your outputs
+    endpoint: outputs.aws_iot_endpoint   // ✅ already in your outputs
   }
 };
 
