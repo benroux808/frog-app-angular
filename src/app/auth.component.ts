@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { getCurrentUser, signIn, signOut, type SignInInput } from 'aws-amplify/auth';
+import { getCurrentUser, signIn, signOut, confirmSignIn, type SignInInput } from 'aws-amplify/auth';
 
 @Component({
   selector: 'app-auth',
@@ -10,7 +10,7 @@ import { getCurrentUser, signIn, signOut, type SignInInput } from 'aws-amplify/a
   template: `
     <div *ngIf="!isAuthenticated" class="auth-container">
       <h3>Sign In to Send IoT Commands</h3>
-      <form (ngSubmit)="onSignIn()" #signInForm="ngForm">
+      <form *ngIf="!needsNewPassword" (ngSubmit)="onSignIn()" #signInForm="ngForm">
         <div class="form-group">
           <label for="email">Email:</label>
           <input
@@ -37,6 +37,25 @@ import { getCurrentUser, signIn, signOut, type SignInInput } from 'aws-amplify/a
           {{ isLoading ? 'Signing In...' : 'Sign In' }}
         </button>
       </form>
+
+      <form *ngIf="needsNewPassword" (ngSubmit)="onConfirmNewPassword()" #newPasswordForm="ngForm">
+        <div class="form-group">
+          <label for="newPassword">New Password:</label>
+          <input
+            type="password"
+            id="newPassword"
+            [(ngModel)]="newPassword"
+            name="newPassword"
+            required
+            minlength="8"
+            #newPasswordInput="ngModel"
+          >
+        </div>
+        <button type="submit" [disabled]="!newPasswordForm.form.valid || isLoading">
+          {{ isLoading ? 'Submitting...' : 'Submit New Password' }}
+        </button>
+      </form>
+
       <p *ngIf="errorMessage" class="error">{{ errorMessage }}</p>
     </div>
 
@@ -101,6 +120,9 @@ export class AuthComponent implements OnInit {
   user: any = null;
   email = '';
   password = '';
+  newPassword = '';
+  needsNewPassword = false;
+  pendingSignInResult: any = null;
   errorMessage = '';
 
   ngOnInit() {
@@ -122,6 +144,8 @@ export class AuthComponent implements OnInit {
 
     this.isLoading = true;
     this.errorMessage = '';
+    this.needsNewPassword = false;
+    this.pendingSignInResult = null;
 
     try {
       const signInInput: SignInInput = {
@@ -136,6 +160,14 @@ export class AuthComponent implements OnInit {
         const nextStep = (signInResult.nextStep as any)?.signInStep ||
                          (signInResult.nextStep as any)?.challengeName ||
                          'additional authentication required';
+
+        if (nextStep === 'CONFIRM_SIGN_IN_WITH_NEW_PASSWORD_REQUIRED') {
+          this.needsNewPassword = true;
+          this.pendingSignInResult = signInResult;
+          this.errorMessage = 'A new password is required. Please enter a new password below.';
+          return;
+        }
+
         this.errorMessage = `Sign in requires additional steps: ${nextStep}`;
         return;
       }
@@ -146,6 +178,31 @@ export class AuthComponent implements OnInit {
     } catch (error: any) {
       this.errorMessage = error?.message || 'Sign in failed';
       console.error('Sign in error:', error);
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  async onConfirmNewPassword() {
+    if (!this.newPassword || !this.pendingSignInResult) return;
+
+    this.isLoading = true;
+    this.errorMessage = '';
+
+    try {
+      await confirmSignIn({
+        challengeResponse: this.newPassword,
+      });
+
+      this.pendingSignInResult = null;
+      this.needsNewPassword = false;
+      this.newPassword = '';
+      this.errorMessage = '';
+
+      await this.checkAuthState();
+    } catch (error: any) {
+      this.errorMessage = error?.message || 'Unable to confirm new password';
+      console.error('Confirm new password error:', error);
     } finally {
       this.isLoading = false;
     }
