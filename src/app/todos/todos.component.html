@@ -2,6 +2,7 @@
 <main>
     <h1>My todos</h1>
     <button (click)="createTodo()">+ new</button>
+    <button (click)="sendDeviceCommand()">Send IoT command</button>
     <ul>
         <li 
             *ngFor="let todo of todos;">
