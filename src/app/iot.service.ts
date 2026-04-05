@@ -32,15 +32,28 @@ export class IotService {
   }
 
   async sendCommand(command: string): Promise<void> {
+    console.log('IoT Service - Attempting to send command:', command);
+    console.log('IoT Service - Region:', this.awsRegion);
+    console.log('IoT Service - Endpoint:', this.awsIoTEndpoint);
+    console.log('IoT Service - Topic:', this.mqttTopic);
+
     const message = {
       action: command,
       source: 'amplify-angular-template',
       sentAt: new Date().toISOString(),
     };
 
-    await this.client.publish({
-      topics: [this.mqttTopic],
-      message,
-    });
+    console.log('IoT Service - Message:', message);
+
+    try {
+      await this.client.publish({
+        topics: [this.mqttTopic],
+        message,
+      });
+      console.log('IoT Service - Command sent successfully');
+    } catch (error) {
+      console.error('IoT Service - Failed to send command:', error);
+      throw error;
+    }
   }
 }

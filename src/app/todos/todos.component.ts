@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
 import { IotService } from '../iot.service';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 const client = generateClient<Schema>();
 
@@ -47,11 +48,18 @@ export class TodosComponent implements OnInit {
 
   async sendDeviceCommand() {
     try {
+      // Check if user is authenticated
+      await getCurrentUser();
+
       await this.iotService.sendCommand('toggle');
       window.alert('IoT command sent successfully');
-    } catch (error) {
-      console.error('error sending IoT command', error);
-      window.alert('Failed to send IoT command. See console for details.');
+    } catch (error: any) {
+      if (error.name === 'UserUnAuthenticatedException') {
+        window.alert('Please sign in first to send IoT commands');
+      } else {
+        console.error('error sending IoT command', error);
+        window.alert('Failed to send IoT command. See console for details.');
+      }
     }
   }
 }
