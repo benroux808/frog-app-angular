@@ -41,7 +41,7 @@ import { getCurrentUser, signIn, signOut, type SignInInput } from 'aws-amplify/a
     </div>
 
     <div *ngIf="isAuthenticated" class="auth-status">
-      <p>Signed in as: {{ user?.signInDetails?.loginId }}</p>
+      <p>Signed in as: {{ user?.username || user?.signInDetails?.loginId || 'authenticated user' }}</p>
       <button (click)="onSignOut()">Sign Out</button>
     </div>
   `,
@@ -129,12 +129,22 @@ export class AuthComponent implements OnInit {
         password: this.password,
       };
 
-      await signIn(signInInput);
+      const signInResult = await signIn(signInInput);
+      console.log('Sign in result', signInResult);
+
+      if (!signInResult.isSignedIn) {
+        const nextStep = (signInResult.nextStep as any)?.signInStep ||
+                         (signInResult.nextStep as any)?.challengeName ||
+                         'additional authentication required';
+        this.errorMessage = `Sign in requires additional steps: ${nextStep}`;
+        return;
+      }
+
       await this.checkAuthState();
       this.email = '';
       this.password = '';
     } catch (error: any) {
-      this.errorMessage = error.message || 'Sign in failed';
+      this.errorMessage = error?.message || 'Sign in failed';
       console.error('Sign in error:', error);
     } finally {
       this.isLoading = false;
